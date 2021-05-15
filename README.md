@@ -1,2 +1,2 @@
-# gnoppix
+# gnoppix - NG
 # gnoppix
