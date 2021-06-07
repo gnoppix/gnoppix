@@ -1,5 +1,5 @@
 echo ""
-echo "
+echo ""
 
 export WORK=~/work
 export CD=~/cd
