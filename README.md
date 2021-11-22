@@ -1,2 +1,1 @@
-# gnoppix - NG
-# gnoppix
+# website

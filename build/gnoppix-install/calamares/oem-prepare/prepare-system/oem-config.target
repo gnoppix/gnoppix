@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2018 Harald Sitter <sitter@kde.org>
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+
+[Unit]
+Description=OEM Configuration
+Requires=basic.target
+Conflicts=rescue.service rescue.target multi-user.target
+After=basic.target rescue.service rescue.target
+AllowIsolate=yes
+Wants=calamares-sddm.service network-manager.service getty-static.service systemd-user-sessions.service plymouth-quit.service plymouth-quit-wait.service

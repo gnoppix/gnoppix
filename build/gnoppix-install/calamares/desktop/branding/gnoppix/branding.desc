@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# SPDX-FileCopyrightText: 2019-2021 Harald Sitter <sitter@kde.org>
+# SPDX-FileCopyrightText: 2017 Jonathan Riddell <jr@jriddell.org>
+---
+componentName:  neon
+
+strings:
+    productName: "@{NAME}"
+    shortProductName: "@{NAME}"
+    version: "@{VERSION}"
+    shortVersion: "@{VERSION}"
+    versionedName: "@{NAME} @{VERSION}"
+    shortVersionedName: "@{NAME} @{VERSION}"
+    bootloaderEntryName: "@{PRETTY_NAME}"
+
+images:
+    productLogo: "kdeneon.png"
+    productIcon: "kdeneon.png"
+    productWelcome: "welcome.png"
+
+slideshow: "/usr/share/ubiquity-slideshow/slides/index.qml"
+slideshowAPI: 2
+
+style: # https://hig.kde.org/style/color/light.html
+    # Custom color to blend with window decoration's bottom most pixel.
+    # Should this become undesirable charcoal grey would be the go-to
+    # replacement.
+    sidebarBackground: "#dee0e2" # This is a made up color not in the HIG but used by BreezeLight :roll_eyes:

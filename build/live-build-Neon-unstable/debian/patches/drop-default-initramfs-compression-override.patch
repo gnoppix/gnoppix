@@ -1,0 +1,20 @@
+Description:
+   * Stop setting LB_INITRAMFS_COMPRESSION default, and instead fallback to
+     using initramfs-tools default. LB_INITRAMFS_COMPRESSION is now only to
+     override whatever initramfs-tools' default compression is. This thus
+     makes live-build default to lz4. LP: #1831736
+Author: Dimitri John Ledkov <xnox@ubuntu.com>
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1831736
+
+
+--- live-build-3.0~a57.orig/functions/defaults.sh
++++ live-build-3.0~a57/functions/defaults.sh
+@@ -220,8 +220,6 @@ Set_defaults ()
+ 			;;
+ 	esac
+ 
+-	LB_INITRAMFS_COMPRESSION="${LB_INITRAMFS_COMPRESSION:-gzip}"
+-
+ 	# Setting initsystem
+ 	case "${LB_MODE}" in
+ 		ubuntu|kubuntu)

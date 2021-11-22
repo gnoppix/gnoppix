@@ -2,9 +2,9 @@
 <html lang="en-US">
     <head>
         <meta charset="UTF-8">
-        <meta http-equiv="refresh" content="0; url=https://www.ubuntu.com">
+        <meta http-equiv="refresh" content="0; url=https://sourceforge.net/projects/gnoppix/">
         <script type="text/javascript">
-            window.location.href = "https://www.ubuntu.com"
+            window.location.href = "https://sourceforge.net/projects/gnoppix/"
         </script>
         <title>Page Redirection</title>
     </head>

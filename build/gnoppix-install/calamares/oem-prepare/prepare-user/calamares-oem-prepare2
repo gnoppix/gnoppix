@@ -1,0 +1,81 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2018-2021 Harald Sitter <sitter@kde.org>
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+
+set -ex
+
+PREPARE_DIR=$(dirname $(realpath $0))
+CALAMARES_DESKTOPFILE="/usr/share/applications/calamares.desktop"
+
+# Consistency check. The root portion will allow the oem user to run calamares via pkexec.
+# Ensure the relevant action is actually available on the system.
+# Otherwise there was a change in calamares that we need to adapt to.
+if ! pkaction | grep --quiet 'com.github.calamares.calamares.pkexec.run'; then
+  kdialog --error "Failed to find installer polkit action. Please file a bug!"
+  exit 1
+fi
+
+if ! grep --quiet --extended-regexp '^Exec=.*pkexec' $CALAMARES_DESKTOPFILE; then
+  kdialog --error "Calamares is not using pkexec? Please file a bug!"
+  exit 1
+fi
+
+MSG="This will finalize the system preparation and prepare for shipping. This cannot be undone. The system will automatically power off once preparations are complete. Are you sure you want to do this?"
+
+if ! kdialog --yesno "$MSG"; then
+  exit 1
+fi
+
+# Make sure autologin and relogin on logout is enabled so we always get back
+# into the session.
+pkexec /calamares/oem-prepare/prepare-system/calamares-oem-prepare-root
+
+mkdir -p ~/.config/autostart
+cp $CALAMARES_DESKTOPFILE ~/.config/autostart
+
+# Drop anything on the desktop. It'd show up in the oem-config session.
+rm -r ~/Desktop/*
+
+# Disable autolock. It makes no sense since the user wouldn't know the password.
+kwriteconfig5 --file kscreenlockerrc --group Daemon --key Autolock false
+# Disable session restore so we get a semi-prestine session
+kwriteconfig5 --file ksmserverrc --group General --key loginMode default
+# Force all windows to center.
+# Calamares specific window rules do not work for some reason
+# so instead we simply force everything to the center (which is mostly only cala anyway)
+kwriteconfig5 --file kwinrc --group Windows --key Placement Centered
+# Disable window borders. Calamares looks much nicer with the sidebar fully
+# integrating into the decoration. We can effort this effect in OEM config
+# scenarios because there aren't really any other windows necessary or visible.
+kwriteconfig5 --file kwinrc --group org.kde.kdecoration2 --key BorderSize None
+
+# Install a rule for calamares so it may not be closed via the window decoration
+# or task bar.
+cat << EOT >> ~/.config/kwinrulesrc
+[1]
+Description=calamares
+clientmachine=localhost
+clientmachinematch=0
+closeable=false #
+closeablerule=2 #
+placement=Centered #
+placementrule=2 #
+wmclass=calamares
+wmclasscomplete=false
+wmclassmatch=1
+
+[General]
+count=1
+EOT
+
+plasmapkg2 -t Plasma/LookAndFeel -r OEM || true
+plasmapkg2 -t Plasma/LookAndFeel -i $PREPARE_DIR/oem-lnf
+
+qdbus org.kde.plasmashell /PlasmaShell org.kde.PlasmaShell.loadLookAndFeelDefaultLayout OEM
+
+sleep 8 # give plasma some time to rejigger
+
+# FIXME: change to shutdown maybe? or drop entirely. when a vendor switches into
+# config mode they will then want to distribute their image, so the reboot is
+# probably only useful for testing
+systemctl -i reboot

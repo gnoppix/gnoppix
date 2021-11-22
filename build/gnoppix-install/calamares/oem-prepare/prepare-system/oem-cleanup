@@ -1,0 +1,32 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2018-2021 Harald Sitter <sitter@kde.org>
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+
+set -ex
+
+# This is part of oem-config-firstboot. Since we run cala through the oem user
+# there is more cleanup we need to do after the oem configuration is done though
+# and the user is no longer needed to run any programs.
+
+# Throw out the user
+pkill -u oem || true
+userdel --force --remove oem || true
+
+rm -f /etc/polkit-1/localauthority/10-vendor.d/10-calamares-oem-config.pkla
+
+# This was already done by the undo module but since we'll now remove
+# oem-config we had better be certain this was called, otherwise the use
+# won't be getting a GUI anymore.
+/bin/systemctl set-default graphical.target || true
+
+for unit in oem-config.target calamares-sddm.service oem-cleanup.service; do
+  /bin/systemctl disable $unit || true
+  rm -f /lib/systemd/system/$unit
+done
+
+# We aren't managed by the calamares package but rather copied into place.
+# This means we are around after calamares already cleaned itself up and
+# allows us to not have to deal with apt (and its exclusive locking) to
+# finalize the cleanup. On the flip side we need to manually rm.
+rm -rf /usr/bin/calmares-oem
+rm -rf /usr/share/calmares-oem

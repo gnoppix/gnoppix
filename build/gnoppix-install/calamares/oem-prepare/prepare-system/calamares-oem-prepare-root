@@ -1,0 +1,85 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2018-2021 Harald Sitter <sitter@kde.org>
+# SPDX-License-Identifier: GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+
+set -ex
+
+cd `dirname "$(realpath $0)"`
+
+# Set pretty much all restrictions possible.
+# For testing it'd be useful to enable logout, run_command, shell_access and possibly kwin_rmb
+cat << EOT >>/etc/xdg/kdeglobals
+[KDE Action Restrictions][\$i]
+action/lock_screen=false
+logout=false
+run_command=false
+shell_access=false
+action/start_new_session=false
+action/switch_user=false
+plasma/allow_configure_when_locked=false
+plasma/containment_actions=false
+plasma/plasmashell/unlockedDesktop=false
+plasma-desktop/scripting_console=false
+plasma-desktop/add_activities=false
+action/kdesktop_rmb=false
+action/configdesktop=false
+action/kwin_rmb=false
+EOT
+
+# Make sure autologin and relogin on logout is enabled so we always get back
+# into the session.
+# Use the configure directory so as to not step on calamares' toes in case
+# it wants to set up autologin during oem-config.
+SDDM_CONF=/etc/sddm.conf.d/01-calamares-oem-config.conf
+mkdir -p --mode=0755 $(dirname $SDDM_CONF) || true # same mode as when kcm_sddm creates it
+cat << EOT >>$SDDM_CONF
+[Autologin]
+Relogin=true
+User=oem
+Session=plasma.desktop
+EOT
+chmod 0644 $SDDM_CONF
+rm -f /etc/sddm.conf # remove the oem's file, it serves no purpose after oem-config
+
+cp -a oem-cleanup /usr/bin/
+cp -a oem-cleanup.service /lib/systemd/system
+/bin/systemctl enable oem-cleanup.service
+
+# Divert sddm. After oem configuration we'll systemd isolate into graphical.target
+# the trick there is that the oem-style sddm must be a different service from
+# the final sddm such that the oem one gets stopped.
+#
+# on focal this is aliased to display-manager which would conflict with our diversion
+# so disable it first
+/bin/systemctl disable sddm.service
+# Then put our fancy shmancy unit in place.
+cp -a /lib/systemd/system/sddm.service /lib/systemd/system/calamares-sddm.service
+/bin/systemctl enable calamares-sddm.service
+
+# Lastly switch to our config target (that will use the fancy unit from above)
+cp -a oem-config.target /lib/systemd/system
+/bin/systemctl enable oem-config.target
+/bin/systemctl set-default oem-config.target
+
+# NB: Mind the check in calamares-oem-prepare2 when changing this!
+cat << CONF >>/etc/polkit-1/localauthority/10-vendor.d/10-calamares-oem-config.pkla
+[Allow Calamares OEM Config]
+Identity=unix-user:oem
+Action=com.github.calamares.calamares.pkexec.run
+ResultAny=no
+ResultInactive=no
+ResultActive=yes
+CONF
+chmod 600 /etc/polkit-1/localauthority/10-vendor.d/10-calamares-oem-config.pkla
+
+### from Ubuntu's oem-config
+# Machine-specific, so remove in case this system is going to be
+# cloned.  These will be regenerated on the first boot.
+rm -f /etc/udev/rules.d/70-persistent-cd.rules \
+      /etc/udev/rules.d/70-persistent-net.rules
+
+rm -f /etc/NetworkManager/system-connections/*
+
+# Potentially sensitive.
+rm -f /home/oem/.ssh/known_hosts
+### end from oem-config
